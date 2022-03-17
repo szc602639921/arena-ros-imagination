@@ -216,11 +216,7 @@ def timer_func():
     timer.start()
 
 def callback_local_costmap(map_data):
-    timer_func() # Important: this function should be here and not in local_costmap(); otherwise the robot may not move at all (so the imagination_map_global_grey.png should be deleted, the console restared, .. for it to work, and sometimes even this does not help!?); makes a difference of course only for version 2;
-    
-    # version 1: save the local_costmap by every change
-    #local_costmap(map_data)
-    
+   
     # version 2: Important: save the local_costmap only every X seconds (for example very 3 seconds) (see move_to_goal.py!)
     # -> but then remove the same check from move_to_goal.py?!!
     # --> ! so dauert es deutlich kuerzer, es muss nur weiterhin das problem mit dem folgenden goal geloest werden!?!

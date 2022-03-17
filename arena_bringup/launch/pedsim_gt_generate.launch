@@ -14,7 +14,7 @@
   <arg name="show_pedsim_walls" default="true"/>
   <arg name="republish_flatland_markers" default="true"/>
   <arg name="use_joystick" default="false"/>
-  <arg name="local_planner"   default="dwa"/> <!-- teb/dwa -->
+  <arg name="local_planner"   default="teb"/> <!-- teb/dwa -->
 
   <!-- Map parameters -->
   <arg name="map_file"        default="map_empty"/> <!-- map_empty vs. scenarioX -->
@@ -105,9 +105,9 @@
    <param name="obstacles_amount" value="$(arg obstacles_amount)"/>
   </node>
 
-  <!--<node name="ground_truth_data" pkg="arena_util_scripts" type="create_ground_truth_map.py" output="screen">
+  <node name="ground_truth_data" pkg="arena_util_scripts" type="create_ground_truth_map.py" output="screen">
    <param name="obstacles_amount" value="$(arg obstacles_amount)"/>
-  </node>-->
+  </node>
 
   <!--<node name="zig_zag" pkg="arena_util_scripts" type="zig_zag_motion.py" output="screen">
   </node>-->
@@ -116,9 +116,9 @@
   </node>-->
 
   <!--node name="reach_goal" pkg="arena_util_scripts" type="move_to_goal.py" output="screen">
-  </node-->
+  </node>
   
-  <!--node name="scan_values" pkg="arena_util_scripts" type="laser_scan_data.py" output="screen">
+  <node name="scan_values" pkg="arena_util_scripts" type="laser_scan_data.py" output="screen">
   </node-->
 
   <!--<node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />-->

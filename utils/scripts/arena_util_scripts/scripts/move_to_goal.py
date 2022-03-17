@@ -28,19 +28,23 @@ from arena_plan_msgs.msg import IntList, ListIntList, ListListIntList, ListOccup
 from std_msgs.msg import String
 import time
 
-sys.path.insert(0,'/home/m-yordanova/python_env/rosnav/lib/python3.6/site-packages/cv2/qt/plugins')
+# sys.path.insert(0,'/home/m-yordanova/python_env/rosnav/lib/python3.6/site-packages/cv2/qt/plugins')
 
-sys.path.insert(0,'/home/m-yordanova/catkin_ws_ma/src/rosnav-imagination')
+sys.path.insert(0,'/home/henry/arena_ws/src/rosnav-imagination')
 import torch # works in (rosnav), but there cv2 does not work, as well as tf
 from torch.utils.data import Dataset
 from torch.utils.data import DataLoader
 import torch.optim as optim
 from torchvision.utils import save_image
-from rl.semantic_anticipator import SemAnt2D # the model
 import tensorflow as tf
 # change cv2.imread() to torch.load() and cv2.imwrite() to torch.save()!?
 # there is also np.save and np.load that always works
 # TODO SOLUTION: $ workon rosnav $ pip install opencv-contrib-python # with NO sourcing
+    ## a model from group "models"
+# load the model for imagination
+device = 'cuda'
+current_model_number = 9900  # 100/300/1000/..
+current_model = torch.load("/home/henry/arena_ws/src/rosnav-imagination/example/models/60x60-shen/model_" + str(current_model_number) + ".pth").to(device)
 
 x_global = 0.0
 y_global = 0.0 
@@ -340,7 +344,7 @@ def training_script():
     # -/+> the robot should move in each direction with the same velocity (leave it small and just make more 'images')
     
     # TODO: json and not yaml as output!?
-    with open("/home/m-yordanova/catkin_ws_ma/src/arena-rosnav/simulator_setup/training/scenario1_idea2.yaml", 'r') as stream:
+    with open("/home/henry/arena_ws/src/arena-rosnav/simulator_setup/training/scenario1_idea2.yaml", 'r') as stream:
     #with open("$(find simulator_setup)/training/scenario1_idea2.yaml", 'r') as stream:
         try:
             doc = yaml.safe_load(stream)
@@ -365,7 +369,8 @@ def training_script():
     # One json file per scenario map!
     # TODO: change the json file to a get a different path # TODO X: scenario1_eval.json
     # TODO X: the planer should be better tuned, it still planes to go trought a really small path etc.; the robot should drive slower etc.
-    with open("/home/m-yordanova/catkin_ws_ma/src/arena-rosnav/simulator_setup/training/scenario1.json", 'r') as stream:
+    # TODO change the json folder more universal
+    with open("/home/henry/arena_ws/src/arena-rosnav/simulator_setup/training/scenario1.json", 'r') as stream:
     #with open("$(find simulator_setup)/training/test.json", 'r') as stream:
         doc = json.load(stream)
         print('json file content:\n' + str(doc) + '\n')
@@ -444,9 +449,9 @@ def training_script():
             #sub_ground_truth_map = rospy.Subscriber("ground_truth_map_temp", Image, callback_ground_truth_map_temp)
             #sub_ground_truth_map = rospy.Subscriber("ground_truth_map_temp", IntList, callback_ground_truth_map_temp)
             #sub_ground_truth_map = rospy.Subscriber("ground_truth_map_temp", OccupancyGrid, callback_ground_truth_map_temp)
-        #    sub_pair_map_60x60 = rospy.Subscriber("pair_temp_60x60", ListOccupancyGrid, callback_pair_temp_60x60)
+            sub_pair_map_60x60 = rospy.Subscriber("pair_temp_60x60", ListOccupancyGrid, callback_pair_temp_60x60)
         #    sub_pair_map_80x80 = rospy.Subscriber("pair_temp_80x80", ListOccupancyGrid, callback_pair_temp_80x80)
-            sub_pair_map_100x100 = rospy.Subscriber("pair_temp_100x100", ListOccupancyGrid, callback_pair_temp_100x100) # TODO X
+            #sub_pair_map_100x100 = rospy.Subscriber("pair_temp_100x100", ListOccupancyGrid, callback_pair_temp_100x100) # TODO X
             #sub_obstacles_map = rospy.Subscriber("obstacles_map_temp", Image, callback_obstacles_map_temp)
             #sub_obstacles_map = rospy.Subscriber("obstacles_map_temp", IntList, callback_obstacles_map_temp)
             global sub_goal
@@ -709,15 +714,18 @@ class CustomDatasetSingle(Dataset): # (TODO) test dataset generator for a single
 # TODO NEXT: put the imagination part in a separate function, so that it could be called for testing but commented out while collecting training data
 # get_single_raw_data -> imagination
 def imagination(map_data, img_name, costmap_gt_range): # TODO: get the raw data from an image and save it into a npy file
-    print('\nImagination in process ...\n')
+    print('+++++++++++++++++++Imagination in process+++++++++++++++++++')
     # costmap_color, ground_truth_color, costmap_id, ground_truth_id
     img_costmap_color = cv2.imread(img_name)
+    print(f'+++++++++++++++++++image: {img_name} is read+++++++++++++++++++')
+
     img_costmap_id = get_id_from_color(img_costmap_color)
-    img_costmap_color_ar = np.asarray(img_costmap_color) # img_ar.shape = (60,60) # rgb color
-    img_costmap_id_ar = np.asarray(img_costmap_id) # img_id_ar.shape = (60,60) # id
-    #print(img_ar) # [[ 0  0  0] [ 0  0  0] ..., [ 0  0  0] [ 0  0  0]]] # rgb color
-    #print(img_id_ar) # [[ 0. 0. ..., 0. 0.] [ 0. 0. ..., 0. 0.] ..., [ 0. 0. ..., 0. 0.]] # id
+    print(f'+++++++++++++++++++get img_costmap_id +++++++++++++++++++')
+    img_costmap_id_ar = np.asarray(img_costmap_id) # img_id_ar.shape = (60,60) 
+
     filename_paired = 'ground_truth_map'.join(img_name.split('costmap'))
+    print(f'+++++++++++++++++++filename_paired: {filename_paired}+++++++++++++++++++')
+    # costmap_color, ground_truth_color, cost
     # check if the current image has a pair, if not - do not do anything!
     if os.path.isfile(filename_paired):
         img_ground_truth_color = cv2.imread(filename_paired)
@@ -726,29 +734,10 @@ def imagination(map_data, img_name, costmap_gt_range): # TODO: get the raw data 
         img_ground_truth_id_ar = np.asarray(img_ground_truth_id)
     else: return
 
-    # convert img_ground_truth_id_ar and img_costmap_id_ar to npy files, keeping the same timestamp, to load them back as arguments in the function CustomDatasetSingle()
-    # it is not needed though, directly the arrays can be arguments in the function CustomDatasetSingle()
-    #path_name_costmap_id_npy = '.npy'.join(img_name.split('.png'))
-    #path_name_ground_truth_id_npy = '.npy'.join(filename_paired.split('.png'))
-    #np.save(path_name_ground_truth_id_npy, img_ground_truth_id_ar)
-    #img_ground_truth_id_npy = np.load(path_name_ground_truth_id_npy)
-    #np.save(path_name_costmap_id_npy, img_costmap_id_ar)
-    #img_costmap_id_npy = np.load(path_name_costmap_id_npy)
-    ##plt.imshow(img_costmap_id_npy)
-    ##plt.show()
-    
-    # put the costmap into a model and get the imagination costmap (the observation)
-    # for now the id costmap should contain only 0 and 1!
     num_catagories = 1
     catagories = [0]
     batch_size = 8
-    device = 'cpu'
-    num_import_layers = 1
-    num_output_layers = num_catagories # for now =1, extend later on!
-    network_size = 32 # 16/32/64
-    anticipator = SemAnt2D(num_import_layers,num_output_layers,network_size).to(device) # init the model
-    optimizer = optim.SGD(anticipator.parameters(), lr=0.001, momentum=0.9) # init the optimizer
-
+    device = 'cuda:0'
     #MapDatasetTestNPY = CustomDatasetSingle(img_ground_truth_id_npy, img_costmap_id_npy, num_catagories, catagories)
     MapDatasetTestNPY = CustomDatasetSingle(img_ground_truth_id_ar, img_costmap_id_ar, num_catagories, catagories)
     test_dataloader_npy = DataLoader(MapDatasetTestNPY, batch_size, shuffle=False)
@@ -757,55 +746,28 @@ def imagination(map_data, img_name, costmap_gt_range): # TODO: get the raw data 
     lidar_test_npy = lidar_test_npy.type(torch.float32).to(device)
     labels_test_npy = labels_test_npy.type(torch.float32).to(device)
 
-    # check labels_test_npy[0,0] and lidar_test_npy[0,0]
-    #path_name_labels_png = 'labels'.join(img_name.split('costmap'))
-    #path_name_lidar_png = 'lidar'.join(img_name.split('costmap'))
-    #save_image(labels_test_npy, path_name_labels_png) # good! the same as the gt image only in black and white
-    #save_image(lidar_test_npy, path_name_lidar_png) # good! the same as the costmap image only in black and white
-    ##print(labels_test_npy) # tensor() array with elements 0. or 1.
+    print("++++++++++++++++++++++init the module for imagination +++++++++++++++")
 
-    # TODO X: sort the collected data and the trained models in folders
-    # Load the model and get the prediction (the label)
-    group_number = 2 # 1 for group "models" & 2 for group "models_state_dict"
-    current_model_number = 0
-    if group_number == 1:
-        ## a model from group "models"
-        current_model_number = 300 # 100/300/1000/..
-        # /home/m-yordanova/.ros -> /home/m-yordanova/catkin_ws_ma/src/rosnav-imagination/example/models/model_100.pth
-        current_model = torch.load("../catkin_ws_ma/src/rosnav-imagination/example/models/model_" + str(current_model_number) + ".pth")
-        #print(current_model) # SemAnt2D(...)
-        current_model.eval()
-        current_model_labels_prediction_npy = current_model(lidar_test_npy)
-    else:
-        ## a model from group "models_state_dict"
-        current_model_number = 2760 # 2760/..
-        current_model_state_dict = torch.load("../catkin_ws_ma/src/rosnav-imagination/example/models_state_dict/model_" + str(current_model_number) + ".pth")
-        #print(current_model_state_dict) # tensor() arrays
-        anticipator.load_state_dict(current_model_state_dict['model_state_dict']) # ! otherwiese 'current_model_labels_prediction_npy = current_model_state_dict(lidar_test_npy)' gives an error that 'dict' object is not callable
-        #print(anticipator) # SemAnt2D(...)
-        anticipator.eval()
-        current_model_labels_prediction_npy = anticipator(lidar_test_npy) # anticipator() / current_model()
+
+    print("++++++++++++++++++++++start prediction +++++++++++++++")
+    current_model_labels_prediction_npy = current_model(lidar_test_npy)['occ_estimate'].to('cpu')
+    print(f"++++++++++++++++++++++prediction done  +++++++++++++++")
+    print(current_model_labels_prediction_npy)
 
     # save the imagination costmap (the observation) as png and npy file (cv2.imwrite, torch.save, np.save, save_image (black img as a result), plt.imsave (works!))
     #print(labels_test_npy.shape) # torch.Size([1, 1, 60, 60])
-    #print(current_model_labels_prediction_npy["occ_estimate"].detach()) # prediction # tensor() array with float elements # tensor([[[[1.3750e-06, 6.0028e-08, 2.5874e-08,  ..., 3.5876e-05, ...]]]])
+    #print(current_model_labels_prediction_npy.detach()) # prediction # tensor() array with float elements # tensor([[[[1.3750e-06, 6.0028e-08, 2.5874e-08,  ..., 3.5876e-05, ...]]]])
     path_name_current_imagination_map_id_png = ('imagination_map_' + str(current_model_number)).join(img_name.split('costmap')) # imagination map = prediction map/costmap
-    plt.imsave(path_name_current_imagination_map_id_png, current_model_labels_prediction_npy["occ_estimate"].detach()[0,0]) # it works only with [0,0] at the end!?
+    plt.imsave(path_name_current_imagination_map_id_png, current_model_labels_prediction_npy.detach()[0,0]) # it works only with [0,0] at the end!?
     imagination_map = cv2.imread(path_name_current_imagination_map_id_png)
-    #path_name_current_imagination_map_id_npy = '.npy'.join(path_name_current_imagination_map_id_png.split('.png')) # imagination map = prediction map/costmap
-    #np.save(path_name_current_imagination_map_id_npy, current_model_labels_prediction_npy["occ_estimate"].detach().numpy()) # not needed
 
-    # FILTER 1: try to filter out false imaginated parts from the output
-    # normalize the tensor torch array (get values between 0 and 1, to be able to filter some out)
     imagination_filter1_normalized_value = 1
-    #print(imagination_map) # (100,100,3) # color ~ (84 1 68)
-    #print(current_model_labels_prediction_npy["occ_estimate"].detach()[0,0].shape) # torch.Size([100, 100]) # tensor([[2.4808e-05, 2.6347e-06, 1.5144e-06,  ..., 3.1066e-05, 6.4751e-05, 2.0734e-04], [...], ...])
-    inputs = current_model_labels_prediction_npy["occ_estimate"].detach()[0,0]
-    #inputs_normal = inputs/tf.reduce_max(tf.abs(inputs)) # doesn't work # TypeError: Cannot interpret 'tf.float32' as a data type
-    inputs_np = inputs.numpy() # [[2.4808e-05, 2.6347e-06, 1.5144e-06,  ..., 3.1066e-05, 6.4751e-05, 2.0734e-04], [...], ...]
-    inputs_np /= np.max(inputs_np) # works # [[0.6392533  0.64117384 0.6324189  ... 0.34298816 0.3978336  0.5802038 ], ... ,[1. 1. 1. ... 1. 1. 1.]]
-    #path_name_imagination_map_id_png_np = 'imagination_map_np'.join(img_name.split('costmap'))
-    #plt.imsave(path_name_imagination_map_id_png_np, inputs_np) # looks exactly like imagination_map, so just like before the transformation from torch to np array
+
+    inputs = current_model_labels_prediction_npy.detach()[0,0]
+
+    inputs_np = inputs.numpy() 
+    inputs_np /= np.max(inputs_np) 
+
     if imagination_filter1_normalized_value == 1:
         filter_factor = 0.3 # 0.2/0.3/0.4/0.5/.. # probability between 0.0 and 1.0 TODO X: tune the number
         for i in range(img_costmap_color.shape[0]):
@@ -940,7 +902,7 @@ def imagination(map_data, img_name, costmap_gt_range): # TODO: get the raw data 
     # visualize the ground truth:
     #map_labels_npy = np.asarray(labels_test_npy) # shape = (1,1,60,60) -> (60,60)
     # visualize the imagination costmap: (should be black & white!) choose the model!
-    ##map_labels_npy = np.asarray(current_model_labels_prediction_npy["occ_estimate"].detach()[0,0]) # shape = (1,1,60,60) -> (60,60) # it is colorful so it does not work, should be black & white!
+    ##map_labels_npy = np.asarray(current_model_labels_prediction_npy.detach()[0,0]) # shape = (1,1,60,60) -> (60,60) # it is colorful so it does not work, should be black & white!
     map_labels_npy = np.asarray(imagination_map_cv2_black_white) # shape = (1,1,60,60) -> (60,60)
     #map_reshaped = map_labels_npy.reshape(60,60)
     map_reshaped = map_labels_npy.reshape(costmap_gt_range,costmap_gt_range) # could be 60/80/100..
@@ -1194,6 +1156,7 @@ def callback_odom(data):
 def save_img(data, img_name): # data.data[costmap, gt]
     global temp_time, time_start, img_sec, start_path, final_path
     temp_time = rospy.get_rostime().secs
+    print(f'++++++++++++++++++++start_path:{start_path} final_path: {final_path}++++++++++++++++++++')
 
     #rospy.Subscriber("/move_base_simple/goal", PoseStamped, callback_pose)
     #rospy.Subscriber("/odom", Odometry, callback_odom)
@@ -1201,6 +1164,7 @@ def save_img(data, img_name): # data.data[costmap, gt]
         # TODO: have not one of 60x60, 80x80, 100x100, but all of them
         # -> change the file name from _ground_truth_map to ground_truth_map_60x60 etc.
         # --> correct the part with deleting the paired black images
+        print(f'++++++++++++++++++++{img_name}++++++++++++++++++++')
         if (img_name == "pair_part_60") or (img_name == "pair_part_80") or (img_name == "pair_part_100"):
             costmap_gt_range = int(img_name.split("_")[2])
             i = 0
@@ -1362,6 +1326,7 @@ def callback_pair_temp_80x80(data):
     save_img(data, "pair_part_80")
 
 def callback_pair_temp_100x100(data):
+    print("++++++++++++++++++++callback_pair_temp_100x100++++++++++++++++++++")
     save_img(data, "pair_part_100")
 
 def callback_obstacles_map_temp(data):

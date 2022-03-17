@@ -95,7 +95,7 @@
   <include file="$(find arena_bringup)/launch/sublaunch/pedsim.launch">
   </include>
 
-  <include file="$(find arena_bringup)/launch/sublaunch/move_base/move_base_$(arg local_planner).launch">
+  <include file="$(find arena_bringup)/launch/sublaunch/move_base/move_base_$(arg local_planner)_sem.launch">
   </include>
 
   <node name="pedsim_test" pkg="arena_util_scripts" type="pedsim_test.py" output="screen">
@@ -104,6 +104,9 @@
   <node name="show_obstacle_types" pkg="arena_util_scripts" type="show_obstacle_types.py" output="screen">
    <param name="obstacles_amount" value="$(arg obstacles_amount)"/>
   </node>
+
+  <!--node name="show_imagination" pkg="arena_util_scripts" type="show_imagination.py" output="screen">
+  </node-->
 
   <!--<node name="ground_truth_data" pkg="arena_util_scripts" type="create_ground_truth_map.py" output="screen">
    <param name="obstacles_amount" value="$(arg obstacles_amount)"/>
@@ -115,7 +118,7 @@
   <!--<node name="show_goal" pkg="arena_util_scripts" type="show_goal.py" output="screen">
   </node>-->
 
-  <!--node name="reach_goal" pkg="arena_util_scripts" type="move_to_goal.py" output="screen">
+  <!--node name="reach_goal" pkg="arena_util_scripts" type="move_to_goal_shen.py" output="screen">
   </node-->
   
   <!--node name="scan_values" pkg="arena_util_scripts" type="laser_scan_data.py" output="screen">
